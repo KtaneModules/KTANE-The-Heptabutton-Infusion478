@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 615501dbe4f3fe94fbf4b564abb10237, type: 3}
+  m_Name: ModConfig
+  m_EditorClassIdentifier: 
+  id: heptabutton
+  title: The Heptabutton
+  author: Infusion
+  description: "It could have been the Octabutton, but that\u2019s called a [b]S[/b]uper
+    [b]T[/b]hin [b]O[/b]ctagonal [b]P[/b]rism.\n\nPress, hold, and release this heptagonal
+    button at a certain time across seven stages.\n\nThere's the Triangle Button,
+    Square Button, the Pentabutton, the Hexabutton, and now the Heptabutton. It's
+    also my second module.\n\nManual can be found at ktane.timwi.de or in the bundled
+    manuals folder.\nSource code is at https://github.com/Infusion478/KTANE-The-Heptabutton\n\nComes
+    with Twitch Plays and colorblind support."
+  version: 1.0
+  outputFolder: build
+  previewImage: {fileID: 2800000, guid: 9f6025523e9d29149a35a4454db5a131, type: 3}

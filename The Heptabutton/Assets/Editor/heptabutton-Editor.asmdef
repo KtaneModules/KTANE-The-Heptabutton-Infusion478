@@ -1,0 +1,10 @@
+{
+  "name": "heptabutton-Editor",
+  "references": [
+    "heptabutton"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": []
+}

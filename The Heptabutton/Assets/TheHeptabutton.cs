@@ -20,6 +20,9 @@ public class TheHeptabutton : MonoBehaviour {
    public TextMesh ColorblindIndicator;
    public GameObject[] StageLights;
    public GameObject[] StageLightEffects;
+   public Renderer BackgroundColor;
+   
+   public string[] Sounds = {"Heptastic Solve!", "Unfortunate..."};
 
    private int colorIndex;
    private bool buttonHeld;
@@ -33,6 +36,12 @@ public class TheHeptabutton : MonoBehaviour {
    private string[] morse = {".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..", ".---", "-.-", ".-..", "--", "-.", "---", ".--.", "--.-", ".-.", "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--.."};
    private int stageThreeColor;
    private bool stageFourCondition;
+   private List<int> tapCode = new List<int> {11, 12, 13, 14, 15, 21, 22, 23, 24, 25, 13, 31, 32, 33, 34, 35, 41, 42, 43, 44, 45, 51, 52, 53, 54, 55};
+   private int X;
+   private int Y;
+   private bool stageSixCondition;
+   private int stageSixReference;
+   private int stageSevenTarget;
 
    static int ModuleIdCounter = 1;
    int ModuleId;
@@ -43,16 +52,16 @@ public class TheHeptabutton : MonoBehaviour {
       ModuleId = ModuleIdCounter++;
       GetComponent<KMBombModule>().OnActivate += Activate;
       Button.OnInteract += delegate () { ButtonPress(); Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonPress, Button.transform); return false; };
-      Button.OnInteractEnded += delegate () { ButtonRelease(); Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonPress, Button.transform); };
+      Button.OnInteractEnded += delegate () { ButtonRelease(); Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.BigButtonRelease, Button.transform); };
    }
 
    void ButtonPress() {
-      if (buttonHeld) {
+      Button.AddInteractionPunch();
+      if (buttonHeld || ModuleSolved) {
          return;
       }
       buttonHeld = true;
       HoldTime = (int)Bomb.GetTime();
-      Button.AddInteractionPunch();
       StartCoroutine(HoldButton());
       if (stage == 2) {
          if (Rnd.Range(0,2) == 0) {
@@ -77,9 +86,12 @@ public class TheHeptabutton : MonoBehaviour {
    }
 
    void ButtonRelease() {
+      Button.AddInteractionPunch(.5f);
+      if (ModuleSolved) {
+         return;
+      }
       buttonHeld = false;
       ReleaseTime = (int)Bomb.GetTime();
-      Button.AddInteractionPunch(.5f);
       StartCoroutine(ReleaseButton());
       switch (stage) {
          case 0:
@@ -131,13 +143,111 @@ public class TheHeptabutton : MonoBehaviour {
                Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s), and released when the last digit was {2}. Neither of those numbers are correct. Strike.", ModuleId, HoldTime - ReleaseTime, ReleaseTime % 10);
                Strike();
                RevertColor();
+            } break;
+         case 3:
+            if (stageFourCondition) {
+               if (HoldTime.ToString().Contains('0') && HoldTime - ReleaseTime == 0) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was tapped at {1} seconds remaining. Correct!", ModuleId, HoldTime);
+                  AdvanceStage();
+               } else if (HoldTime.ToString().Contains('0')) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) at {2} seconds remaining, but it was supposed to be tapped. Strike.", ModuleId, HoldTime - ReleaseTime, HoldTime);
+                  Strike();
+               } else if (HoldTime - ReleaseTime == 0) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was tapped at {1} seconds remaining, which does not contain the digit 0. Strike.", ModuleId, HoldTime);
+                  Strike();
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) at {2} seconds remaining. Both of those are incorrect. Strike.", ModuleId, HoldTime - ReleaseTime, HoldTime);
+                  Strike();
+               }
+            } else {
+               if (HoldTime % 10 == (Bomb.GetBatteryCount()) % 10 && HoldTime - ReleaseTime >=6 && HoldTime - ReleaseTime <= 8) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and released after {2} seconds. Correct!", ModuleId, HoldTime % 10, HoldTime - ReleaseTime);
+                  AdvanceStage();
+               } else if (HoldTime % 10 == (Bomb.GetBatteryCount()) % 10) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was released after {2} second(s). Strike.", ModuleId, HoldTime % 10, HoldTime - ReleaseTime);
+                  Strike();
+               } else if (HoldTime - ReleaseTime >=6 && HoldTime - ReleaseTime <= 8) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was released after {1} seconds, but it was held when the last digit was {2}. Strike.", ModuleId, HoldTime - ReleaseTime, HoldTime % 10);
+                  Strike();
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and it was released after {2} second(s). Neither of those are correct. Strike.", ModuleId, HoldTime % 10, HoldTime - ReleaseTime);
+                  Strike();
+               }
+            } break;
+         case 4:
+            if (ButtonText.text.Length % 2 == 1) {
+               if (HoldTime % 10 == X && ReleaseTime % 10 == Y) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and released when the last digit was {2}. Correct!", ModuleId, HoldTime % 10, ReleaseTime % 10);
+                  AdvanceStage();
+               } else if (HoldTime % 10 == X) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was released when the last digit was {2}. Strike.", ModuleId, HoldTime % 10, ReleaseTime % 10);
+                  Strike();
+               } else if (ReleaseTime % 10 == Y) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was released when the last digit was {1}, but it was held when the last digit was {2}. Strike.", ModuleId, ReleaseTime % 10, HoldTime % 10);
+                  Strike();
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and released when the last digit was {2}. Neither of those are correct. Strike.", ModuleId, HoldTime % 10, ReleaseTime % 10);
+                  Strike();
+               }
+            } else {
+               if (HoldTime % 10 == Y && ReleaseTime % 10 == X) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and released when the last digit was {2}. Correct!", ModuleId, HoldTime % 10, ReleaseTime % 10);
+                  AdvanceStage();
+               } else if (HoldTime % 10 == Y) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was released when the last digit was {2}. Strike.", ModuleId, HoldTime % 10, ReleaseTime % 10);
+                  Strike();
+               } else if (ReleaseTime % 10 == X) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was released when the last digit was {1}, but it was held when the last digit was {2}. Strike.", ModuleId, ReleaseTime % 10, HoldTime % 10);
+                  Strike();
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and released when the last digit was {2}. Neither of those are correct. Strike.", ModuleId, HoldTime % 10, ReleaseTime % 10);
+                  Strike();
+               }
+            } break;
+         case 5:
+            if (stageSixReference < 8) {
+               if (HoldTime % 10 == stageSixReference && HoldTime - ReleaseTime == 0) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was tapped when the last digit was {1}. Correct!", ModuleId, HoldTime % 10);
+                  AdvanceStage();
+               } else if (HoldTime % 10 == stageSixReference) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was supposed to be tapped. Strike.", ModuleId, HoldTime % 10);
+                  Strike();
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit was {2}. Strike.", ModuleId, (HoldTime - ReleaseTime == 0)?"tapped":"held", HoldTime % 10);
+                  Strike();
+               }
+            } else {
+               if (HoldTime % 10 == stageSixReference % 10 && HoldTime - ReleaseTime == 0) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was tapped when the last digit was {1}. Correct!", ModuleId, HoldTime % 10);
+                  AdvanceStage();
+               } else if (HoldTime % 10 == stageSixReference % 10) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was supposed to be tapped. Strike.", ModuleId, HoldTime % 10);
+                  Strike();
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit was {2}. Strike.", ModuleId, (HoldTime - ReleaseTime == 0)?"tapped":"held", HoldTime % 10);
+                  Strike();
+               }
+            } break;
+         case 6:
+            if (HoldTime % 60 == stageSevenTarget && HoldTime - ReleaseTime == 7) {
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, and released after exactly 7 seconds. Well done!", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60));
+               AdvanceStage();
+            } else if (HoldTime % 60 == stageSevenTarget) {
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, but it was released after {5} second(s). Come on! Strike...", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60), HoldTime - ReleaseTime);
+               Strike();
+            } else if (HoldTime - ReleaseTime == 7) {
+               Debug.LogFormat("[The Heptabutton #{0}] Well, the button was held for 7 seconds, but it was held at {1}{2}{3}{4}. Strike...", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60));
+               Strike();
+            } else {
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, AND it was released after {5} second(s). Strike!", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60), HoldTime - ReleaseTime);
+               Strike();
             }
          break;
       }
    }
 
    void Activate () {
-
+      return;
    }
 
    void Start () {
@@ -170,7 +280,7 @@ public class TheHeptabutton : MonoBehaviour {
       stage++;
       StageLights[stage - 1].GetComponent<MeshRenderer>().material = ButtonColors[8];
       StageLightEffects[stage - 1].gameObject.SetActive(true);
-      if (stage !=8) {
+      if (stage !=7) {
          ChangeButtonColor();
          switch (stage) {
             case 1:
@@ -188,6 +298,108 @@ public class TheHeptabutton : MonoBehaviour {
                }
                Debug.LogFormat("[The Heptabutton #{0}] Stage 3: The Morse code equivalent of the first character of the serial number is {1}", ModuleId, code);
                Debug.LogFormat("[The Heptabutton #{0}] Therefore, the button must be held for {1} second(s), and released when the last digit is {2}.", ModuleId, length, Bomb.GetSerialNumberNumbers().Last());
+            break;
+            case 3:
+               if (stageFourCondition) {
+                  Debug.LogFormat("[The Heptabutton #{0}] Stage 4: Because the button changed color on the previous stage, the button must be tapped when the total number of seconds remaining contains the digit 0.", ModuleId);
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] Stage 4: Because the button did not change color on the previous stage, the button must be held when the last digit is {1}, and released after between 6 and 8 seconds.", ModuleId, (Bomb.GetBatteryCount()) % 10);
+               }
+            break;
+            case 4:
+               int rowSum = 0;
+               int colSum = 0;
+               int taps = 0;
+               for (int i = 0; i < ButtonText.text.Length; i++) {
+                  taps = tapCode[Array.IndexOf("ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray(), ButtonText.text.ToCharArray()[i])];
+                  rowSum += (taps / 10);
+                  colSum += (taps % 10);
+               }
+               if (rowSum % 7 == 0) {
+                  X = 7;
+               } else if (rowSum % 11 == 0) {
+                  X = (Bomb.GetSerialNumberNumbers().Sum() % 10);
+               } else {
+                  bool thirdCondition = true;
+                  for (int i = 0; i < rowSum.ToString().Length; i++) {
+                     if (Bomb.GetSerialNumberNumbers().Join("").Contains(rowSum.ToString()[i])) {
+                        thirdCondition = false;
+                     }
+                  }
+                  if (thirdCondition) {
+                     X = Math.Abs(Bomb.GetSerialNumberNumbers().First() - Bomb.GetSerialNumberNumbers().Last());
+                  } else if (rowSum > colSum) {
+                     X = (rowSum + colSum) / 10;
+                  } else {
+                     X = 0;
+                  }
+               }
+               if (colSum % 7 == 0) {
+                  Y = 7;
+               } else if (colSum % 11 == 0) {
+                  Y = (Bomb.GetSerialNumberNumbers().Sum() % 10);
+               } else {
+                  bool thirdCondition = true;
+                  for (int i = 0; i < colSum.ToString().Length; i++) {
+                     if (Bomb.GetSerialNumberNumbers().Join("").Contains(colSum.ToString()[i])) {
+                        thirdCondition = false;
+                     }
+                  }
+                  if (thirdCondition) {
+                     Y = Math.Abs(Bomb.GetSerialNumberNumbers().First() - Bomb.GetSerialNumberNumbers().Last());
+                  } else if (colSum > rowSum) {
+                     Y = (colSum + rowSum) / 10;
+                  } else {
+                     Y = 0;
+                  }
+               }
+               Debug.LogFormat("[The Heptabutton #{0}] Stage 5: The sum of the tap code rows in the button's text is {1}, and the sum of the columns is {2}.", ModuleId, rowSum, colSum);
+               Debug.LogFormat("[The Heptabutton #{0}] This makes X equal to {1} and Y equal to {2}.", ModuleId, X, Y);
+               if (ButtonText.text.Length % 2 == 1) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button's label has an odd number of letters, so it must be held when the last digit is {1}, and released when the last digit is {2}.", ModuleId, X, Y);
+               } else {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button's label has an even number of letters, so it must be held when the last digit is {1}, and released when the last digit is {2}.", ModuleId, Y, X);
+               }
+            break;
+            case 5:
+               for (int i = 0; i < 5; i++) {
+                  if (colorValues[colorIndex] == stageColors[i]) {
+                     stageSixCondition = true;
+                     stageSixReference = (i + 1);
+                     break;
+                  }
+               }
+               if (stageSixCondition) {
+                  Debug.LogFormat("[The Heptabutton #{0}] Stage 6: The button was the same color on stage {1} as it is on the current stage.", ModuleId, stageSixReference);
+                  Debug.LogFormat("[The Heptabutton #{0}] Therefore, the button must be tapped when the last digit of the timer is {1}.", ModuleId, stageSixReference);
+               } else if (ButtonText.text.Length == 7) {
+                  stageSixReference = 7;
+                  Debug.LogFormat("[The Heptabutton #{0}] Stage 6: The button has not yet been the color that it is showing now, and its label's length is 7.", ModuleId);
+                  Debug.LogFormat("[The Heptabutton #{0}] Therefore, the button must be tapped when the last digit is 7.", ModuleId);
+               } else {
+                  stageSixReference = 0;
+                  for (int i = 0; i < ButtonText.text.Length; i++) {
+                     stageSixReference += (Array.IndexOf("ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray(), ButtonText.text.ToCharArray()[i])) + 1;
+                  } 
+                  Debug.LogFormat("[The Heptabutton #{0}] Stage 6: The button has not yet been the color that it is showing now, and the sum of the alphabetic positions of the label is {1}.", ModuleId, stageSixReference);
+                  Debug.LogFormat("[The Heptabutton #{0}] Therefore, the button must be tapped when the last digit is {1}.", ModuleId, stageSixReference % 10);
+               }
+            break;
+            case 6:
+               stageSevenTarget = 0;
+               for (int i = 0; i < 7; i++) {
+                  stageSevenTarget += (stageColors[i] / 100);
+                  stageSevenTarget += ((stageColors[i] / 10) % 10);
+                  stageSevenTarget += (stageColors[i] % 10);
+               }
+               Debug.LogFormat("[The Heptabutton #{0}] Stage 7: The sum of every RGB value of each stage's button color is {1}.", ModuleId, stageSevenTarget);
+               stageSevenTarget += (Bomb.GetSerialNumberNumbers().Sum() % 18);
+               Debug.LogFormat("[The Heptabutton #{0}] After adding the sum of the serial number digits, modulo 18, the new value is {1}.", ModuleId, stageSevenTarget);
+               if (!(Bomb.GetModuleNames().Count().ToString().Contains('7'))) {
+                  stageSevenTarget = (60 - stageSevenTarget);
+                  Debug.LogFormat("[The Heptabutton #{0}] However, the number of modules does not contain a 7, so the new value is {1}.", ModuleId, stageSevenTarget);
+               }
+               Debug.LogFormat("[The Heptabutton #{0}] Therefore, the button must be held when the seconds digits are {1}{2}, and released after 7 seconds.", ModuleId, (stageSevenTarget < 10)?"0":"", stageSevenTarget);
             break;
          }
       } else {
@@ -211,11 +423,37 @@ public class TheHeptabutton : MonoBehaviour {
    }
 
    void Solve () {
-      GetComponent<KMBombModule>().HandlePass();
+      ModuleSolved = true;
+      StartCoroutine(SolveAnimation());
    }
 
    void Strike () {
+      Audio.PlaySoundAtTransform(Sounds[1], Button.transform);
       GetComponent<KMBombModule>().HandleStrike();
+   }
+
+   IEnumerator SolveAnimation() {
+      Audio.PlaySoundAtTransform(Sounds[0], Button.transform);
+      ButtonColor.material = ButtonColors[8];
+      BackgroundColor.material = ButtonColors[2];
+      ButtonText.color = Color.black;
+      ButtonText.text = "A";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "AM";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "AMA";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "AMAZ";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "AMAZI";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "AMAZIN";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "AMAZING";
+      ButtonColor.material = ButtonColors[25];
+      BackgroundColor.material = ButtonColors[6];
+      Debug.LogFormat("[The Heptabutton #{0}] Module solved! Amazing!", ModuleId);
+      GetComponent<KMBombModule>().HandlePass();
    }
 
    IEnumerator HoldButton() {
@@ -233,14 +471,88 @@ public class TheHeptabutton : MonoBehaviour {
    }
 
 #pragma warning disable 414
-   private readonly string TwitchHelpMessage = @"Use !{0} to do something.";
+   private readonly string TwitchHelpMessage = @"!{0} t (number) [Taps the button at the specified time] | !{0} h (number) [Holds the button at the specified time] | !{0} r (number) [Releases the button at the specified time] | Commands can be chained with semicolons (;). If a time is one digit, it will be considered as the last seconds digit. If it is two digits, it will be considered as the two seconds digits. | !{0} colorblind [Enables colorblind mode]";
 #pragma warning restore 414
 
    IEnumerator ProcessTwitchCommand (string Command) {
+      Command = Command.Trim().ToLower();
       yield return null;
+      if (ModuleSolved) {
+         yield return "sendtochaterror The module is solving.";
+         yield break;
+      }
+      if (Command == "colorblind") {
+         if (!colorblindModeEnabled) {
+            colorblindModeEnabled = true;
+            ColorblindIndicator.gameObject.SetActive(colorblindModeEnabled);
+            Debug.LogFormat("[The Heptabutton #{0}] Colorblind mode was enabled by Twitch Plays.", ModuleId);
+         }
+         yield break;
+      }
+      string[] Commands = Command.Split(';');
+      for (int i = 0; i < Commands.Length; i++) {
+         if (!"thr".Contains(Commands[i][0]) || Commands[i][1] != ' ' || Commands[i].Length > 4 || Commands[i].Length < 3 || !"0123456789".Contains(Commands[i][2]) || (Commands[i].Length == 4 && !"0123456789".Contains(Commands[i][3]))) {
+            yield return "sendtochaterror Invalid command.";
+            yield break;
+         }
+      }
+      for (int i = 0; i < Commands.Length; i++) {
+         if (Commands[i][0] == 't') {
+            if (Commands[i].Length == 3) {
+               while ((((int)Bomb.GetTime() % 60) % 10) != int.Parse(Commands[i][2].ToString())) yield return "trycancel The button press was canceled.";
+            } else {
+               while (((int)Bomb.GetTime() % 60) != (int.Parse(Commands[i][2].ToString()) * 10 + int.Parse(Commands[i][3].ToString()))) yield return "trycancel The button press was canceled.";
+            }
+            Button.OnInteract();
+            Button.OnInteractEnded();
+         } else if (Commands[i][0] == 'h') {
+            if (Commands[i].Length == 3) {
+               while ((((int)Bomb.GetTime() % 60) % 10) != int.Parse(Commands[i][2].ToString())) yield return "trycancel The button hold was canceled.";
+            } else {
+               while (((int)Bomb.GetTime() % 60) != (int.Parse(Commands[i][2].ToString()) * 10 + int.Parse(Commands[i][3].ToString()))) yield return "trycancel The button hold was canceled.";
+            }
+            Button.OnInteract();
+         } else if (Commands[i][0] == 'r') {
+            if (Commands[i].Length == 3) {
+               while ((((int)Bomb.GetTime() % 60) % 10) != int.Parse(Commands[i][2].ToString())) yield return "trycancel The button release was canceled.";
+            } else {
+               while (((int)Bomb.GetTime() % 60) != (int.Parse(Commands[i][2].ToString()) * 10 + int.Parse(Commands[i][3].ToString()))) yield return "trycancel The button release was canceled.";
+            }
+            Button.OnInteractEnded();
+         } else {
+            yield return "sendtochaterror Something went wrong, or the command was invalid.";
+            yield break;
+         }
+      }
    }
 
    IEnumerator TwitchHandleForcedSolve () {
-      yield return null;
+      for (int i = (stage + 1); i < 8; i++) {
+         StageLights[i - 1].GetComponent<MeshRenderer>().material = ButtonColors[8];
+         StageLightEffects[i - 1].gameObject.SetActive(true);
+      }
+      ModuleSolved = true;
+      Audio.PlaySoundAtTransform(Sounds[0], Button.transform);
+      ButtonColor.material = ButtonColors[2];
+      BackgroundColor.material = ButtonColors[25];
+      ButtonText.color = Color.white;
+      ButtonText.text = "C";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "CH";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "CHE";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "CHEA";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "CHEAT";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "CHEATE";
+      yield return new WaitForSeconds(.666666f);
+      ButtonText.text = "CHEATER";
+      ButtonColor.material = ButtonColors[25];
+      BackgroundColor.material = ButtonColors[2];
+      ButtonText.color = Color.black;
+      Debug.LogFormat("[The Heptabutton #{0}] Module autosolved by Twitch Plays.", ModuleId);
+      GetComponent<KMBombModule>().HandlePass();
    }
 }
