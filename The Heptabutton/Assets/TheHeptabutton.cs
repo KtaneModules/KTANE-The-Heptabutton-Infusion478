@@ -57,12 +57,15 @@ public class TheHeptabutton : MonoBehaviour {
 
    void ButtonPress() {
       Button.AddInteractionPunch();
-      if (buttonHeld || ModuleSolved) {
+      if (buttonHeld) {
          return;
       }
       buttonHeld = true;
-      HoldTime = (int)Bomb.GetTime();
       StartCoroutine(HoldButton());
+      if (ModuleSolved) {
+         return;
+      }
+      HoldTime = (int)Bomb.GetTime();
       if (stage == 2) {
          if (Rnd.Range(0,2) == 0) {
             stageThreeColor = colorIndex;
@@ -87,12 +90,12 @@ public class TheHeptabutton : MonoBehaviour {
 
    void ButtonRelease() {
       Button.AddInteractionPunch(.5f);
+      buttonHeld = false;
+      StartCoroutine(ReleaseButton());
       if (ModuleSolved) {
          return;
       }
-      buttonHeld = false;
       ReleaseTime = (int)Bomb.GetTime();
-      StartCoroutine(ReleaseButton());
       switch (stage) {
          case 0:
             if (HoldTime % 10 == (ButtonText.text.Length + Bomb.GetSerialNumberNumbers().First()) % 10 && HoldTime - ReleaseTime == 0) {
@@ -424,6 +427,7 @@ public class TheHeptabutton : MonoBehaviour {
 
    void Solve () {
       ModuleSolved = true;
+      ColorblindIndicator.gameObject.SetActive(false);
       StartCoroutine(SolveAnimation());
    }
 
@@ -532,6 +536,7 @@ public class TheHeptabutton : MonoBehaviour {
          StageLightEffects[i - 1].gameObject.SetActive(true);
       }
       ModuleSolved = true;
+      ColorblindIndicator.gameObject.SetActive(false);
       Audio.PlaySoundAtTransform(Sounds[0], Button.transform);
       ButtonColor.material = ButtonColors[2];
       BackgroundColor.material = ButtonColors[25];
