@@ -21,6 +21,6 @@ MonoBehaviour:
     also my second module.\n\nManual can be found at ktane.timwi.de or in the bundled
     manuals folder.\nSource code is at https://github.com/Infusion478/KTANE-The-Heptabutton\n\nComes
     with Twitch Plays and colorblind support."
-  version: 1.1
+  version: 1.2
   outputFolder: build
   previewImage: {fileID: 2800000, guid: 9f6025523e9d29149a35a4454db5a131, type: 3}

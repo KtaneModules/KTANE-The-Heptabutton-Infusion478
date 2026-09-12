@@ -33,6 +33,7 @@ public class TheHeptabutton : MonoBehaviour {
    private List<int> stageColors = new List<int> {};
    private int HoldTime;
    private int ReleaseTime;
+   private int HoldLength;
    private string[] morse = {".-", "-...", "-.-.", "-..", ".", "..-.", "--.", "....", "..", ".---", "-.-", ".-..", "--", "-.", "---", ".--.", "--.-", ".-.", "...", "-", "..-", "...-", ".--", "-..-", "-.--", "--.."};
    private int stageThreeColor;
    private bool stageFourCondition;
@@ -96,16 +97,17 @@ public class TheHeptabutton : MonoBehaviour {
          return;
       }
       ReleaseTime = (int)Bomb.GetTime();
+      HoldLength = Math.Abs(HoldTime - ReleaseTime);
       switch (stage) {
          case 0:
-            if (HoldTime % 10 == (ButtonText.text.Length + Bomb.GetSerialNumberNumbers().First()) % 10 && HoldTime - ReleaseTime == 0) {
+            if (HoldTime % 10 == (ButtonText.text.Length + Bomb.GetSerialNumberNumbers().First()) % 10 && HoldLength == 0) {
                Debug.LogFormat("[The Heptabutton #{0}] The button was tapped when the last digit of the timer was {1}. Correct!", ModuleId, HoldTime % 10);
                AdvanceStage();
             } else if (HoldTime % 10 == (ButtonText.text.Length + Bomb.GetSerialNumberNumbers().First()) % 10) {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) when the last digit of the timer was {2}. Correct time, but the button was supposed to be tapped. Strike.", ModuleId, HoldTime - ReleaseTime, HoldTime % 10);
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) when the last digit of the timer was {2}. Correct time, but the button was supposed to be tapped. Strike.", ModuleId, HoldLength, HoldTime % 10);
                Strike();
             } else {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit of the timer was {2}. That is incorrect. Strike.", ModuleId, (HoldTime - ReleaseTime == 0)?"tapped":"held", HoldTime % 10);
+               Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit of the timer was {2}. That is incorrect. Strike.", ModuleId, (HoldLength == 0)?"tapped":"held", HoldTime % 10);
                Strike();
             } break;
          case 1:
@@ -131,49 +133,49 @@ public class TheHeptabutton : MonoBehaviour {
             for (int i = 0; i < code.Length; i++) {
                length += (code[i].ToString() == ".")?1:3;
             }
-            if (HoldTime - ReleaseTime == length && ReleaseTime % 10 == Bomb.GetSerialNumberNumbers().Last()) {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s), and released when the last digit was {2}. Correct!", ModuleId, HoldTime - ReleaseTime, ReleaseTime % 10);
+            if (HoldLength == length && ReleaseTime % 10 == Bomb.GetSerialNumberNumbers().Last()) {
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s), and released when the last digit was {2}. Correct!", ModuleId, HoldLength, ReleaseTime % 10);
                AdvanceStage();
-            } else if (HoldTime - ReleaseTime == length) {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s), but it was released when the last digit was {2}. Strike.", ModuleId, HoldTime - ReleaseTime, ReleaseTime % 10);
+            } else if (HoldLength == length) {
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s), but it was released when the last digit was {2}. Strike.", ModuleId, HoldLength, ReleaseTime % 10);
                Strike();
                RevertColor();
             } else if (ReleaseTime % 10 == Bomb.GetSerialNumberNumbers().Last()) {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was released when the last digit was {1}, but it was held for {2} second(s). Strike.", ModuleId, ReleaseTime % 10, HoldTime - ReleaseTime);
+               Debug.LogFormat("[The Heptabutton #{0}] The button was released when the last digit was {1}, but it was held for {2} second(s). Strike.", ModuleId, ReleaseTime % 10, HoldLength);
                Strike();
                RevertColor();
             } else {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s), and released when the last digit was {2}. Neither of those numbers are correct. Strike.", ModuleId, HoldTime - ReleaseTime, ReleaseTime % 10);
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s), and released when the last digit was {2}. Neither of those numbers are correct. Strike.", ModuleId, HoldLength, ReleaseTime % 10);
                Strike();
                RevertColor();
             } break;
          case 3:
             if (stageFourCondition) {
-               if (HoldTime.ToString().Contains('0') && HoldTime - ReleaseTime == 0) {
+               if (HoldTime.ToString().Contains('0') && HoldLength == 0) {
                   Debug.LogFormat("[The Heptabutton #{0}] The button was tapped at {1} seconds remaining. Correct!", ModuleId, HoldTime);
                   AdvanceStage();
                } else if (HoldTime.ToString().Contains('0')) {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) at {2} seconds remaining, but it was supposed to be tapped. Strike.", ModuleId, HoldTime - ReleaseTime, HoldTime);
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) at {2} seconds remaining, but it was supposed to be tapped. Strike.", ModuleId, HoldLength, HoldTime);
                   Strike();
-               } else if (HoldTime - ReleaseTime == 0) {
+               } else if (HoldLength == 0) {
                   Debug.LogFormat("[The Heptabutton #{0}] The button was tapped at {1} seconds remaining, which does not contain the digit 0. Strike.", ModuleId, HoldTime);
                   Strike();
                } else {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) at {2} seconds remaining. Both of those are incorrect. Strike.", ModuleId, HoldTime - ReleaseTime, HoldTime);
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held for {1} second(s) at {2} seconds remaining. Both of those are incorrect. Strike.", ModuleId, HoldLength, HoldTime);
                   Strike();
                }
             } else {
-               if (HoldTime % 10 == (Bomb.GetBatteryCount()) % 10 && HoldTime - ReleaseTime >=6 && HoldTime - ReleaseTime <= 8) {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and released after {2} seconds. Correct!", ModuleId, HoldTime % 10, HoldTime - ReleaseTime);
+               if (HoldTime % 10 == (Bomb.GetBatteryCount()) % 10 && HoldLength >=6 && HoldLength <= 8) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and released after {2} seconds. Correct!", ModuleId, HoldTime % 10, HoldLength);
                   AdvanceStage();
                } else if (HoldTime % 10 == (Bomb.GetBatteryCount()) % 10) {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was released after {2} second(s). Strike.", ModuleId, HoldTime % 10, HoldTime - ReleaseTime);
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was released after {2} second(s). Strike.", ModuleId, HoldTime % 10, HoldLength);
                   Strike();
-               } else if (HoldTime - ReleaseTime >=6 && HoldTime - ReleaseTime <= 8) {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was released after {1} seconds, but it was held when the last digit was {2}. Strike.", ModuleId, HoldTime - ReleaseTime, HoldTime % 10);
+               } else if (HoldLength >=6 && HoldLength <= 8) {
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was released after {1} seconds, but it was held when the last digit was {2}. Strike.", ModuleId, HoldLength, HoldTime % 10);
                   Strike();
                } else {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and it was released after {2} second(s). Neither of those are correct. Strike.", ModuleId, HoldTime % 10, HoldTime - ReleaseTime);
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, and it was released after {2} second(s). Neither of those are correct. Strike.", ModuleId, HoldTime % 10, HoldLength);
                   Strike();
                }
             } break;
@@ -209,40 +211,40 @@ public class TheHeptabutton : MonoBehaviour {
             } break;
          case 5:
             if (stageSixReference < 8) {
-               if (HoldTime % 10 == stageSixReference && HoldTime - ReleaseTime == 0) {
+               if (HoldTime % 10 == stageSixReference && HoldLength == 0) {
                   Debug.LogFormat("[The Heptabutton #{0}] The button was tapped when the last digit was {1}. Correct!", ModuleId, HoldTime % 10);
                   AdvanceStage();
                } else if (HoldTime % 10 == stageSixReference) {
                   Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was supposed to be tapped. Strike.", ModuleId, HoldTime % 10);
                   Strike();
                } else {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit was {2}. Strike.", ModuleId, (HoldTime - ReleaseTime == 0)?"tapped":"held", HoldTime % 10);
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit was {2}. Strike.", ModuleId, (HoldLength == 0)?"tapped":"held", HoldTime % 10);
                   Strike();
                }
             } else {
-               if (HoldTime % 10 == stageSixReference % 10 && HoldTime - ReleaseTime == 0) {
+               if (HoldTime % 10 == stageSixReference % 10 && HoldLength == 0) {
                   Debug.LogFormat("[The Heptabutton #{0}] The button was tapped when the last digit was {1}. Correct!", ModuleId, HoldTime % 10);
                   AdvanceStage();
                } else if (HoldTime % 10 == stageSixReference % 10) {
                   Debug.LogFormat("[The Heptabutton #{0}] The button was held when the last digit was {1}, but it was supposed to be tapped. Strike.", ModuleId, HoldTime % 10);
                   Strike();
                } else {
-                  Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit was {2}. Strike.", ModuleId, (HoldTime - ReleaseTime == 0)?"tapped":"held", HoldTime % 10);
+                  Debug.LogFormat("[The Heptabutton #{0}] The button was {1} when the last digit was {2}. Strike.", ModuleId, (HoldLength == 0)?"tapped":"held", HoldTime % 10);
                   Strike();
                }
             } break;
          case 6:
-            if (HoldTime % 60 == stageSevenTarget && HoldTime - ReleaseTime == 7) {
+            if (HoldTime % 60 == stageSevenTarget && HoldLength == 7) {
                Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, and released after exactly 7 seconds. Well done!", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60));
                AdvanceStage();
             } else if (HoldTime % 60 == stageSevenTarget) {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, but it was released after {5} second(s). Come on! Strike...", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60), HoldTime - ReleaseTime);
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, but it was released after {5} second(s). Come on! Strike...", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60), HoldLength);
                Strike();
-            } else if (HoldTime - ReleaseTime == 7) {
+            } else if (HoldLength == 7) {
                Debug.LogFormat("[The Heptabutton #{0}] Well, the button was held for 7 seconds, but it was held at {1}{2}{3}{4}. Strike...", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60));
                Strike();
             } else {
-               Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, AND it was released after {5} second(s). Strike!", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60), HoldTime - ReleaseTime);
+               Debug.LogFormat("[The Heptabutton #{0}] The button was held at {1}{2}{3}{4}, AND it was released after {5} second(s). Strike!", ModuleId, (HoldTime / 60), ":", ((HoldTime % 60) < 10)?"0":"", (HoldTime % 60), HoldLength);
                Strike();
             }
          break;
